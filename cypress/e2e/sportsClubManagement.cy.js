@@ -1,59 +1,77 @@
-import LoginPage from '../pages/loginPage';
-import CategoriesPage from '../pages/categoriesPage';
-import DashboardPage from '../pages/dashboardPage';
-import AddCategoryModalPage from '../pages/addCategoryModalPage';
-import AddSubcategoryModalPage from '../pages/addSubcategoryModalPage';
-import IndexSelectorPage from '../pages/indexSelectorPage';
-import CreateAccountPage from '../pages/createAccountPage';
+import LoginPageActions from './web/pages/loginPage/loginPageActions';
+import CategoriesPageActions from './web/pages/categoriesPage/categoriesPageActions';
+import DashboardPageActions from './web/pages/dashboardPage/dashboardPageActions';
+import AddCategoryModalPageActions from './web/pages/addCategoryModalPage/addCategoryModalPageActions';
+import IndexSelectorPageActions from './web/pages/indexSelectorPage/indexSelectorPageActions';
+import AccountApiService from './api/services/accountApiService';
+import CategoryApiService from './api/services/categoryApiService';
+
+import {
+  generateRandomCategory,
+  generateRandomSubcategory,
+  generateRandomUser
+} from './helpers/dataFactory';
+
 
 describe('Sport Management e2e', () => {
-  const loginPage = new LoginPage();
-  const dashboardPage = new DashboardPage();
-  const categoriesPage = new CategoriesPage();
-  const createAccountPage = new CreateAccountPage();
-  const addCategoryModalPage = new AddCategoryModalPage();
-  const addSubcategoryModalPage = new AddSubcategoryModalPage();
-  const indexSelectorPage = new IndexSelectorPage();
-  
-  const categoryName = Math.random().toString(36).substring(2, 10);
-  const subcategoryName = Math.random().toString(36).substring(2, 10);
-  const userEmail = `${Math.random().toString(36).substring(2, 15)}@example.com`;
-  const userPassword ="Test@1234";
+  const loginPage = new LoginPageActions();
+  const dashboardPage = new DashboardPageActions();
+  const categoriesPage = new CategoriesPageActions();
+  const accountApiService = new AccountApiService();
+  const categoryApiService = new CategoryApiService();
+  const addCategoryModalPage = new AddCategoryModalPageActions();
+  const indexSelectorPage = new IndexSelectorPageActions();
+  const category = generateRandomCategory();
+  const subcategory = generateRandomSubcategory();
+  const user = generateRandomUser();
 
   it('Categories and subcategories creation', () => {
-    // Create account
-    createAccountPage.verifyAccountCreation(userEmail,userPassword).then((response) => {
-      expect(response.status).to.eq(201);expect(response.body).to.have.property('email', userEmail);
-      expect(response.body).to.have.property('id').that.is.a('string');
-      expect(response.body).to.have.property('password');
-      expect(response.body).to.have.property('roles');
+    accountApiService.register(user).then((response) => {
+      expect(response).to.have.property('email', user.email);
+      expect(response).to.have.property('id');
+      expect(response).to.have.property('roles');
     });
-
-    //Sign in with account created
-    loginPage.visit();
-    loginPage.verifyLoginPage();
-    loginPage.fillEmail(userEmail);
-    loginPage.fillPassword(userPassword);
+    
+    cy.visit(Cypress.env('loginPage'));
+    verifyLoginModal(loginPage);
+    loginPage.fillEmail(user.email);
+    loginPage.fillPassword(user.password);
     loginPage.submitLogin();
-    dashboardPage.verifyDashboardPage();    
+    assertDasboardPageCategoriesIsVisible(dashboardPage);
+    dashboardPage.goToCategoriesPage();
+    categoriesPage.clickAddButton();
 
-    // Categories and subcategories creation
-    dashboardPage.goToCategoriesPage();    
-    categoriesPage.verifyCategoriesPage();    
-    categoriesPage.clickAddButton();
-    addCategoryModalPage.fillCategoryName(categoryName);
-    addCategoryModalPage.interceptCategoryCreateRequest();
+    assertAddCategoryModalVisible(addCategoryModalPage);
+    addCategoryModalPage.fillCategoryName(category.name);
+    categoryApiService.interceptCreateCategoryRequest();
     addCategoryModalPage.clickAcceptButton();
-    addCategoryModalPage.verifyCreateCategoryRequestStatus(categoryName);
+    categoryApiService.waitForCategoryCreation(category.name);
     categoriesPage.clickAddButton();
-    addSubcategoryModalPage.verifyModal();    
-    addSubcategoryModalPage.interceptCategoryCreateRequest();
-    addSubcategoryModalPage.fillCategoryName(subcategoryName);
-    addSubcategoryModalPage.checkSubcategoryCheckbox();
-    addSubcategoryModalPage.fillSubCategoryName(categoryName);
-    addSubcategoryModalPage.clickAcceptButton();
-    addSubcategoryModalPage.verifyCreateSubCategoryRequestStatus(subcategoryName);
+    assertAddCategoryModalVisible(addCategoryModalPage);
+    addCategoryModalPage.fillCategoryName(subcategory.name);
+    addCategoryModalPage.checkSubcategoryCheckbox();
+    addCategoryModalPage.fillSubCategoryName(category.name+'{enter}');
+    categoryApiService.interceptCreateSubCategoryRequest();
+    addCategoryModalPage.clickAcceptButton();
+    categoryApiService.waitForSubCategoryCreation(subcategory.name);
     indexSelectorPage.goToTheLatestPage();
-    indexSelectorPage.latestRecord.invoke('text').should('eq', categoryName);
+    indexSelectorPage.modalPage.latestRecord.invoke('text').should('eq', category.name);
   });
 });
+
+function assertAddCategoryModalVisible(page) {
+  page.modalPage.addCategoryModal.should('be.visible');
+  page.modalPage.categoryNameInputField.should('be.visible');
+  page.modalPage.acceptButton.should('be.visible');
+}
+
+function assertDasboardPageCategoriesIsVisible(page){
+  cy.url().should('include', '/dashboard');
+  page.modalPage.categoryTypes.should('be.visible');
+}
+
+function verifyLoginModal(page) {
+  page.modalPage.emailField.should('be.visible');
+  page.modalPage.passwordField.should('be.visible');
+  page.modalPage.submitButton.should('be.visible');
+}

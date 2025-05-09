@@ -1,5 +1,5 @@
-class IndexSelectorPage {
-  //Locators
+class IndexSelectorPageSelectors {
+  
   get latestPage() {
     return cy.get('.page-item').eq(-2);
   }
@@ -8,11 +8,7 @@ class IndexSelectorPage {
     return cy.get('tr:last-child').find('td:nth-child(2)');
   }
   
-  //actions  
-  goToTheLatestPage(){
-    this.latestPage.click();
-  }
 }
   
-export default IndexSelectorPage;
+export default IndexSelectorPageSelectors;
   
