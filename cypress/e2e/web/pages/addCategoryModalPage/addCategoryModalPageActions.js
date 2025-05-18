@@ -21,6 +21,18 @@ class AddCategoryModalPageActions {
   checkSubcategoryCheckbox() {
     this.modalPage.subcategoryCheckBox.check({ force: true });
   }
+
+  createCategory(name) {
+    this.fillCategoryName(name);
+    this.clickAcceptButton();
+  }
+
+  createSubCategory(categoryName, subcategoryName) {
+    this.fillCategoryName(subcategoryName);
+    this.checkSubcategoryCheckbox();
+    this.fillSubCategoryName(categoryName +'{enter}');
+    this.clickAcceptButton();
+  }
 }
 
 export default AddCategoryModalPageActions;
