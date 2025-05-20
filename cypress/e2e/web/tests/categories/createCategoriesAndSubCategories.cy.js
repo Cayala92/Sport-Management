@@ -7,8 +7,7 @@ import AccountApiService from '../../../api/services/accountApiService';
 import CategoryApiService from '../../../api/services/categoryApiService';
 
 import {
-  generateRandomCategory,
-  generateRandomSubcategory,
+  randomString,
   generateRandomUser
 } from '../../../helpers/dataFactory';
 
@@ -21,42 +20,46 @@ describe('Categories And Subcategories Creation e2e', () => {
   const categoryApiService = new CategoryApiService();
   const addCategoryModalPage = new AddCategoryModalPageActions();
   const indexSelectorPage = new IndexSelectorPageActions();
-  const category = generateRandomCategory();
-  const subcategory = generateRandomSubcategory();
+  const category = `category_${Date.now()}_${randomString(4)}`;
+  const subcategory = `subcategory${Date.now()}_${randomString(4)}`;
   const user = generateRandomUser();
 
-  it('Categories and subcategories creation', () => {
+  before(() => {
     accountApiService.register(user).then((response) => {
       expect(response).to.have.property('email', user.email);
       expect(response).to.have.property('id');
       expect(response).to.have.property('roles');
     });
-    
+  });
+
+  beforeEach(() => {
     cy.visit(Cypress.env('loginPage'));
     verifyLoginModal(loginPage);
     cy.signIn(user.email, user.password);
     assertUserIsAuthenticated(dashboardPage);
     dashboardPage.goToCategoriesPage();
+  });
 
+  it('should create a category and a subcategory', () => {
     //openCategoriesModal
     categoriesPage.clickAddButton();
     assertAddCategoryModalVisible(addCategoryModalPage);
     
     //create category
     categoryApiService.interceptCreateCategoryRequest();
-    addCategoryModalPage.createCategory(category.name);
-    categoryApiService.waitForCategoryCreation(category.name);
+    addCategoryModalPage.createCategory(category);
+    categoryApiService.waitForCategoryCreation(category);
 
     //Open categories modal and craetes subcategory
     categoriesPage.clickAddButton();
     assertAddCategoryModalVisible(addCategoryModalPage);
 
     categoryApiService.interceptCreateCategoryRequest();
-    addCategoryModalPage.createSubCategory(category.name, subcategory.name);
-    categoryApiService.waitForCategoryCreation(subcategory.name, false);
+    addCategoryModalPage.createSubCategory(category, subcategory);
+    categoryApiService.waitForSubcategoryCreation(subcategory);
 
     //verifySubcategoryIsListed  
-    verifySubcategoryIsListed(indexSelectorPage, subcategory.name, category.name);
+    verifySubcategoryIsListed(indexSelectorPage, subcategory, category);
   });
 });
 

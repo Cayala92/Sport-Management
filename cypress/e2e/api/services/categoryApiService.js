@@ -5,36 +5,61 @@ class CategoryApiService {
     return cy.intercept('POST', `${BASE_API}/category-type/create`).as('postCategory');
   }
 
-  waitForCategoryCreation(expectedName, isRoot = true) {
+  waitForCategoryCreation(expectedName) {
     return cy.wait('@postCategory').then((interception) => {
-      this.assertCategoryRequestPayload(interception, expectedName, isRoot);
-      this.assertCategoryResponse(interception, expectedName, isRoot);
+      this.assertCategoryRequestPayload(interception, expectedName);
+      this.assertCategoryResponse(interception, expectedName);
       return interception;
     });
   }
 
-  assertCategoryRequestPayload(interception, expectedName, isRoot) {
+  assertCategoryRequestPayload(interception, expectedName) {
     const { request } = interception;
-    expect(request.body, 'Request payload debe tener los datos correctos').to.deep.include({
+    expect(request.body, 'Request payload should have expected data').to.deep.include({
       name: expectedName,
-      root: isRoot,
-      parentId: isRoot ? null : request.body.parentId,
+      root: true,
+      parentId:  null,
     });
   }
 
-  assertCategoryResponse(interception, expectedName, isRoot) {
+  assertCategoryResponse(interception, expectedName) {
     const { response } = interception;
-    expect(response.statusCode, 'El status code debe ser 200').to.eq(200);
-    expect(response.body, 'El body debe tener un id').to.have.property('id').that.is.a('string');
-    expect(response.body, 'El body debe tener los datos correctos').to.deep.include({
+    expect(response.statusCode, 'Status code should be 200').to.eq(200);
+    expect(response.body, 'Response body should have the attribute id').to.have.property('id').that.is.a('string');
+    expect(response.body, 'Response body should have the expected data').to.deep.include({
       name: expectedName,
-      root: isRoot,
+      root: true,
     });
-    if (isRoot) {
-      expect(response.body.parentId, 'parentId debe ser null para root').to.be.null;
-    } else {
-      expect(response.body.parentId, 'parentId debe ser string para subcategoría').to.be.a('string');
-    }
+    expect(response.body.parentId, 'parentId should be null when is root').to.be.null;  
+  }
+
+
+ waitForSubcategoryCreation(expectedName) {
+    return cy.wait('@postCategory').then((interception) => {
+      this.assertSubcategoryRequestPayload(interception, expectedName);
+      this.assertSubcategoryResponse(interception, expectedName);
+      return interception;
+    });
+  }
+
+  assertSubcategoryRequestPayload(interception, expectedName) {
+    const { request } = interception;
+    expect(request.body, 'Request payload should have expected data').to.deep.include({
+      name: expectedName,
+      root: false,
+      parentId: request.body.parentId,
+    });
+  }
+  
+  assertSubcategoryResponse(interception, expectedName, parentId) {
+    const { response } = interception;
+    expect(response.statusCode, 'Status code should be 200').to.eq(200);
+    expect(response.body, 'Response body should have the attribute id').to.have.property('id').that.is.a('string');
+    expect(response.body, 'Response body should have the expected data').to.deep.include({
+      name: expectedName,
+      root: false,
+    });
+    expect(response.body.parentId, 'parentId should be an string when it is a subcategory ').to.be.a('string');
   }
 }
 
